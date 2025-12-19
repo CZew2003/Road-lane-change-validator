@@ -14,7 +14,7 @@
 (ag_percept (percept_pobj elem2) (percept_pname velocity) (percept_pval 45))
 
 ; --- POLITIE, distanta 55m ---
-(ag_percept (percept_pobj elem3) (percept_pname isa) (percept_pval vehicle))
-(ag_percept (percept_pobj elem3) (percept_pname type) (percept_pval emergency))
-(ag_percept (percept_pobj elem3) (percept_pname rel_pos) (percept_pval back))
-(ag_percept (percept_pobj elem3) (percept_pname rel_dist) (percept_pval 5500))
+(ag_percept (percept_pobj elem4) (percept_pname isa) (percept_pval vehicle))
+(ag_percept (percept_pobj elem4) (percept_pname type) (percept_pval emergency))
+(ag_percept (percept_pobj elem4) (percept_pname rel_pos) (percept_pval back))
+(ag_percept (percept_pobj elem4) (percept_pname rel_dist) (percept_pval 5500))
