@@ -7,14 +7,22 @@
 (ag_percept (percept_pobj elem1) (percept_pname road_category) (percept_pval city))
 (ag_percept (percept_pobj elem1) (percept_pname has_type) (percept_pval discontinuous_strip))
 
-; --- EGO: Semnalizare pornita, viteza 47km/h ---
+; --- EGO: Semnalizare pornita, viteza 44km/h ---
 (ag_percept (percept_pobj elem2) (percept_pname partof) (percept_pval ev))
 (ag_percept (percept_pobj elem2) (percept_pname isa) (percept_pval vehicle))
 (ag_percept (percept_pobj elem2) (percept_pname blink) (percept_pval left))
-(ag_percept (percept_pobj elem2) (percept_pname velocity) (percept_pval 47))
+(ag_percept (percept_pobj elem2) (percept_pname velocity) (percept_pval 44))
 
-; --- ROAD ELEM: cale ferata, 65m ---
+; --- TRAFIC: Tramvai oprit, 69m ---
+(ag_percept (percept_pobj elem3) (percept_pname partof) (percept_pval ev))
+(ag_percept (percept_pobj elem3) (percept_pname isa) (percept_pval vehicle))
+(ag_percept (percept_pobj elem3) (percept_pname has_type) (percept_pval tram))
+(ag_percept (percept_pobj elem3) (percept_pname rel_pos) (percept_pval front))
+(ag_percept (percept_pobj elem3) (percept_pname rel_dist) (percept_pval 6900))
+
+; --- INFRASTRUCTURA: statie fara refugiu, 69m ---
 (ag_percept (percept_pobj elem4) (percept_pname partof) (percept_pval ev))
 (ag_percept (percept_pobj elem4) (percept_pname isa) (percept_pval road_elem))
-(ag_percept (percept_pobj elem4) (percept_pname type) (percept_pval railway_level_crossing))
-(ag_percept (percept_pobj elem3) (percept_pname rel_dist) (percept_pval 6500))
+(ag_percept (percept_pobj elem4) (percept_pname has_type) (percept_pval tram_station_without_shelter))
+(ag_percept (percept_pobj elem4) (percept_pname rel_pos) (percept_pval front))
+(ag_percept (percept_pobj elem4) (percept_pname rel_dist) (percept_pval 6900))

@@ -13,8 +13,8 @@
 (ag_percept (percept_pobj elem2) (percept_pname blink) (percept_pval left))
 (ag_percept (percept_pobj elem2) (percept_pname velocity) (percept_pval 71))
 
-; --- ROAD ELEM: Curba, distanta 60m
+; --- ROAD ELEM: Curba, distanta 3m
 (ag_percept (percept_pobj elem4) (percept_pname partof) (percept_pval ev))
 (ag_percept (percept_pobj elem4) (percept_pname isa) (percept_pval road_elem))
-(ag_percept (percept_pobj elem4) (percept_pname type) (percept_pval curve))
-(ag_percept (percept_pobj elem3) (percept_pname rel_dist) (percept_pval 6000))
+(ag_percept (percept_pobj elem4) (percept_pname has_type) (percept_pval curve))
+(ag_percept (percept_pobj elem4) (percept_pname rel_dist) (percept_pval 300))

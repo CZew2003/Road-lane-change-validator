@@ -16,5 +16,5 @@
 ; --- ROAD ELEM: intersectie, 37m ---
 (ag_percept (percept_pobj elem4) (percept_pname partof) (percept_pval ev))
 (ag_percept (percept_pobj elem4) (percept_pname isa) (percept_pval road_elem))
-(ag_percept (percept_pobj elem4) (percept_pname type) (percept_pval intersection))
-(ag_percept (percept_pobj elem3) (percept_pname rel_dist) (percept_pval 3700))
+(ag_percept (percept_pobj elem4) (percept_pname has_type) (percept_pval intersection))
+(ag_percept (percept_pobj elem4) (percept_pname rel_dist) (percept_pval 3700))

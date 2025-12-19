@@ -14,7 +14,7 @@
 ;(defglobal ?*ag-tic-in-debug* = TRUE)
 
 
-(defglobal ?*totalNrRules* = 270)
+(defglobal ?*totalNrRules* = 10000)
 
 ;
 ;----------Modul: PERCEPT-MANAGER-----------
@@ -31,8 +31,7 @@
 ;(defglobal ?*sim-in-debug* = TRUE)
 (defglobal ?*percepts-in-debug* = FALSE)
 ;(defglobal ?*percepts-in-debug* = TRUE)
-(defglobal ?*perceptsDir* = "./perceptiiTest05/")
-
+(defglobal ?*perceptsDir* = "./percepts/scene2/")
 
 (deftemplate PERCEPT-MANAGER::timp (slot valoare))
 

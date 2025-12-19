@@ -1,245 +1,336 @@
-;
-;-------Auxiliary facts ---------------------------------------
-;
-
-(defrule AGENT::initCycle-overtaking
-    (declare (salience 89))
-    (timp (valoare ?)) ;make sure it fires each cycle
+; --- Regula initiala (Corect)
+(defrule AGENT::initCycle-lane-change
+    (declare (salience 100))
+    (timp (valoare ?)) 
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>initCycle-overtaking prohibited by default " crlf))
-    (assert (ag_bel (bel_type moment) (bel_pname overtaking-maneuver) (bel_pval prohibited))) ;by default, we assume overtaking NOT valid
-    ;(facts AGENT)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed)))
 )
 
-(defrule AGENT::initCycle-right-turn
-    (declare (salience 89))
-    (timp (valoare ?)) ;make sure it fires each cycle
-=>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>initCycle-right-turn prohibited by default " crlf))
-    (assert (ag_bel (bel_type moment) (bel_pname right-turn-maneuver) (bel_pval prohibited))) ;by default, we assume overtaking NOT valid
-    ;(facts AGENT)
-)
+; --- REGULI ORAS
 
-(defrule AGENT::initCycle-left-turn
-    (declare (salience 89))
-    (timp (valoare ?)) ;make sure it fires each cycle
-=>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>initCycle-left-turn prohibited by default " crlf))
-    (assert (ag_bel (bel_type moment)  (bel_pname left-turn-maneuver) (bel_pval prohibited))) ;by default, we assume overtaking NOT valid
-    ;(facts AGENT)
-)
-
-;;----------------------------------
-;;
-;;    Overtaking
-;;
-;;----------------------------------
-
-;
-;-------Check percepts to update restriction fluents-----------
-;
-;---Case #1: a fluent with 1 sign to turn it on and 2 signs which might turn it off
-
-;--- Sign overtaking prohibited
-(defrule AGENT::rdi
+; --- Viteza prea mare (> 50 km/h)
+(defrule AGENT::restrictie_oras_viteza
     (timp (valoare ?t))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname isa) (bel_pval road_sign))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval depasire_interzisa))
-=>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>rdi vad indicator " depasire_interzisa crlf))
-    (assert (ag_bel (bel_type fluent) (bel_pname no-overtaking-zone) (bel_pval yes)))
-    ;(facts AGENT)
-)
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?road) (bel_pname road_category) (bel_pval city))
 
-(defrule AGENT::frdi
-    (timp (valoare ?t))
-    ?f <- (ag_bel (bel_type fluent) (bel_pname no-overtaking-zone) (bel_pval yes))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname isa) (bel_pval road_sign))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval final_depasire_interzisa))
+    (ag_bel (bel_type moment) (bel_pobj ?ego) (bel_pname isa) (bel_pval vehicle))
+    (ag_bel (bel_type moment) (bel_pobj ?ego) (bel_pname velocity) (bel_pval ?v))
+    (test (> ?v 50))
+    
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>frdi vad indicator " final_depasire_interzisa crlf))
     (retract ?f)
-    ;(facts AGENT)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: [ORAS] Schimbare banda interzisa. Viteza (" ?v " km/h) depaseste limita de 50 km/h." crlf)
 )
 
-(defrule AGENT::far
+; --- Distanta prea mica fata de masina din spate (< 5m / 500cm)
+(defrule AGENT::restrictie_oras_distanta
     (timp (valoare ?t))
-    ?f <- (ag_bel (bel_type fluent) (bel_pname no-overtaking-zone) (bel_pval yes))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname isa) (bel_pval road_sign))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval  incetarea_tuturor_restrictiilor))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+
+    (ag_bel (bel_type moment) (bel_pobj ?road) (bel_pname road_category) (bel_pval city))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname isa) (bel_pval vehicle))
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname rel_pos) (bel_pval back|left_back))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname rel_dist) (bel_pval ?d))
+    (test (< ?d 500))
+    
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>far vad indicator " tip incetarea_tuturor_restrictiilor crlf))
     (retract ?f)
-    ;(facts AGENT)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: [ORAS] Schimbare banda interzisa. Vehicul in spate la doar " ?d " cm (Minim admis: 500 cm)." crlf)
 )
 
-;----Case #2: an non-fluent belief: it depends on the current percepts only
-;--- Marcaj trecere pietoni perceput in momentul curent
-(defrule AGENT::rmtp
+
+; --- DRUMURI NATIONALE
+
+
+; --- Viteza prea mare pentru DN (> 90 km/h)
+(defrule AGENT::restrictie_exterior_viteza
     (timp (valoare ?t))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname isa) (bel_pval road_surface_marking))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval  trecere_pietoni))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?road) (bel_pname road_category) (bel_pval exterior))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?ego) (bel_pname isa) (bel_pval vehicle))
+    (ag_bel (bel_type moment) (bel_pobj ?ego) (bel_pname velocity) (bel_pval ?v))
+    (test (> ?v 90))
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>rmtp vad marcaj " trecere_pietoni crlf))
-    (assert (ag_bel (bel_type moment) (bel_pname pedestrian-crossing-marking) (bel_pval yes)))
-)
-
-;--- Marcaj linie continua perceput in momentul curent
-(defrule AGENT::rmlc
-    (timp (valoare ?t))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname isa) (bel_pval road_surface_marking))
-    (ag_bel (bel_type moment) (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval linie_cont))
-=>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>rmlc vad marcaj " linie_cont crlf))
-    (assert (ag_bel (bel_type moment) (bel_pname continuous-line-marking) (bel_pval yes)))
-    ;(facts AGENT)
-)
-
-
-;-- TODO: daca am Semn trecere de pietoni (nu marcaj, ci semn!) - switch fluent dupa o anumita distanta parcursa
-;-- de abstractizat terminarea parcurgerii distantei 
-
-;-- TODO: marcaj linie continua pe care l-as incalca la repliere - tratare perceptii curente+viitoare
-;-- de integrat si in regula validate-overtaking
-
-;-----Validate intention of overtaking: check if there is any restriction ----------
-(defrule AGENT::validate-overtaking
-    (declare (salience -10))
-    ?f <- (ag_bel (bel_type moment) (bel_pname overtaking-maneuver) (bel_pval prohibited))
-    (not (ag_bel (bel_type fluent) (bel_pname no-overtaking-zone) (bel_pval yes)))
-    (not (ag_bel (bel_type moment) (bel_pname pedestrian-crossing-marking) (bel_pval yes)))
-    (not (ag_bel (bel_type moment) (bel_pname continuous-line-marking) (bel_pval yes)))
-; TODO: De restul cazurilor, listate mai jos, trebuie sa te ocupi 
-;    (not (crt-intersectie))
-;    (not (crt-rampa))
-;    (not (crt-curba))
-;    (not (crt-vizibilitate redusa))
-;    (not (crt-pasaj))
-;    (not (crt-pod))
-;    (not (crt-sub pod))
-;    (not (crt-tunel))
-;    (not (crt-cale ferata curenta))
-;    (not (crt-urmeaza cale ferata))
-;    (not (crt-statie))
-;    (not (crt-marcaj dublu continuu))
-;    (not (crt-posibila coliziune))
-;    (not (crt-coloana))
-;    (not (crt-coloana_oficiala))
-=>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>validate-overtaking NU->DA (nu avem restrictii) " crlf))
     (retract ?f)
-    (assert (ag_bel (bel_type moment) (bel_pname overtaking-maneuver) (bel_pval allowed)))
-    ;(facts AGENT)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: [DN] Schimbare banda interzisa. Viteza (" ?v " km/h) peste limita de 90 km/h." crlf)
 )
 
-
-;;----------------------------------
-;;
-;;    Right turn
-;;
-;;----------------------------------
-
-;--- Sign forbidding right turn or forcing either go ahead or left turn
-(defrule AGENT::r-no-right-turn-sign
+; --- Distanta prea mica fata de masina din spate (< 15m)
+(defrule AGENT::restrictie_exterior_distanta
     (timp (valoare ?t))
-    (ag_bel (bel_pobj ?ps) (bel_pname isa) (bel_pval road_sign))
-    (ag_bel (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval ?v&interzis_viraj_dreapta | obligatoriu_inainte | obligatoriu_stanga | obligatoriu_inainte_stanga))
-=>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>r-no-right-turn-sign" crlf))
-    (assert (ag_bel (bel_type fluent) (bel_pname no-right-turn-zone) (bel_pval yes)))
-    ;(facts AGENT)
-)
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
 
-(defrule AGENT::r-no-right-turn-zone-end
-    (timp (valoare ?t))
-    ?f <- (ag_bel (bel_type fluent) (bel_pname no-right-turn-zone) (bel_pval yes))
-    (ag_bel (bel_pobj ?ps) (bel_pname isa) (bel_pval area_limit))
-    (ag_bel (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval intersection_end))
+    (ag_bel (bel_type moment) (bel_pobj ?road) (bel_pname road_category) (bel_pval exterior))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname isa) (bel_pval vehicle))
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname rel_pos) (bel_pval back|left_back))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname rel_dist) (bel_pval ?d))
+    (test (< ?d 1500))
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>r-no-right-turn-zone-end we crossed an intersection" crlf))
     (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: [DN] Pericol! Vehicul in spate la doar " ?d " cm (Minim necesar pe DN: 1500cm)." crlf)
 )
 
- ;--- Sign forbidding access on a street
-(defrule AGENT::r-no-access
+
+
+; --- AUTOSTRADA
+
+; --- Viteza prea mare pentru Autostrada (>130 km/h)
+(defrule AGENT::restrictie_autostrada_viteza
     (timp (valoare ?t))
-    (ag_bel (bel_pobj ?ps) (bel_pname isa) (bel_pval road_sign))
-    (ag_bel (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval ?v& accesul_interzis | circulatia_interzisa_in_ambele_sensuri))
-    ;;;(ag_bel (bel_pobj ?ps) (bel_pname direction) (bel_pval ?pd& right | left))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?road) (bel_pname road_category) (bel_pval highway))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?ego) (bel_pname isa) (bel_pval vehicle))
+    (ag_bel (bel_type moment) (bel_pobj ?ego) (bel_pname velocity) (bel_pval ?v))
+    (test (> ?v 130))
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>r-no-access" crlf))
-    (assert (ag_bel (bel_type moment) (bel_pname no-access) (bel_pval yes)))
-    ;(facts AGENT)
-)
-
-;-----Validate intention of right-turn: check if there is any restriction ----------
-(defrule AGENT::validate-right-turn
-    (declare (salience -10))
-    ?f <- (ag_bel (bel_type moment) (bel_pname right-turn-maneuver) (bel_pval prohibited))
-    (not (ag_bel (bel_type fluent) (bel_pname no-right-turn-zone) (bel_pval yes)))
-    ;(not (ag_bel (bel_type moment) (bel_pname no-access) (bel_pval yes) (bel_pdir right)))
-    ;; TODO: manage direction
-    (not (ag_bel (bel_type moment) (bel_pname no-access) (bel_pval yes)))
-=>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>validate-right-turn NU->DA (nu avem restrictii) " crlf))
     (retract ?f)
-    (assert (ag_bel (bel_type moment) (bel_pname right-turn-maneuver) (bel_pval allowed)))
-    ;(facts AGENT)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: [HWY] Schimbare banda interzisa. Viteza (" ?v " km/h) este ilegala." crlf)
 )
 
-
-;;----------------------------------
-;;
-;;    Left turn
-;;
-;;----------------------------------
-
-;--Sign forbidding access on a street to the left dealt by r-no-access rule
-;--continuous line presence checked by rmlc rule
-;--TODO: roundabout
-
-;--- Sign forbidding left turn or forcing either go ahead or right turn
-(defrule AGENT::r-no-left-turn-sign
+; --- Distanta prea mica fata de masina din spate (< 35m)
+(defrule AGENT::restrictie_autostrada_distanta
     (timp (valoare ?t))
-    (ag_bel (bel_pobj ?ps) (bel_pname isa) (bel_pval road_sign))
-    (ag_bel (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval ?v&interzis_viraj_stanga | obligatoriu_inainte | obligatoriu_dreapta | obligatoriu_inainte_dreapta | intersectie_cu_sens_giratoriu))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+
+    (ag_bel (bel_type moment) (bel_pobj ?road) (bel_pname road_category) (bel_pval highway))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname isa) (bel_pval vehicle))
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname rel_pos) (bel_pval back|left_back))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname rel_dist) (bel_pval ?d))
+    (test (< ?d 3500))
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>r-no-left-turn-sign" ?v crlf))
-    (assert (ag_bel (bel_type fluent) (bel_pname no-left-turn-zone) (bel_pval yes)))
-    ;(facts AGENT)
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: [HWY] Manevra riscanta la viteza mare! Vehicul la " ?d " cm (Minim necesar: 3500 cm)." crlf)
 )
 
-(defrule AGENT::r-no-left-turn-zone-end
+
+
+
+; --- REGULI GENERALE
+
+; --- Semnalizare oprita, verificata la inceput deoarece altfel nu este permisa miscarea
+(defrule AGENT::lipsa_semnalizare
+    (declare (salience 90))
     (timp (valoare ?t))
-    ?f <- (ag_bel (bel_type fluent) (bel_pname no-left-turn-zone) (bel_pval yes))
-    (ag_bel (bel_pobj ?ps) (bel_pname isa) (bel_pval area_limit))
-    (ag_bel (bel_pobj ?ps) (bel_pname isa) (bel_pval area_limit))
-    (ag_bel (bel_pobj ?ps) (bel_pname semnificatie) (bel_pval intersection_end))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?ego) (bel_pname isa) (bel_pval vehicle))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?ego) (bel_pname blink) (bel_pval none))
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>r-no-left-turn-zone-end we crossed an intersection" crlf))
     (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: Manevra interzisa. Semnalizarea este oprita." crlf)
 )
 
-;-----Validate intention of left-turn: check if there is any restriction ----------
-(defrule AGENT::validate-left-turn
-    (declare (salience -10))
-    ?f <- (ag_bel (bel_type moment) (bel_pname left-turn-maneuver) (bel_pval prohibited))
-    (not (ag_bel (bel_type fluent) (bel_pname no-left-turn-zone) (bel_pval yes)))
-    ;(not (ag_bel (bel_type moment) (bel_pname no-access) (bel_pval yes) (bel_pdir left)))
-    ;; TODO: manage direction
-     (not (ag_bel (bel_type moment) (bel_pname no-access) (bel_pval yes)))
-    (not (ag_bel (bel_type moment) (bel_pname continuous-line-marking) (bel_pval yes)))
-;roundabout
+; --- Infrastructura interzisa
+(defrule AGENT::restrictii_infrastructura_si_carosabil
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?road) (bel_pname isa) (bel_pval road_attribute))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?road) (bel_pname has_type) (bel_pval ?type&continuous_strip|bumpy|slippery))
 =>
-    (if (eq ?*ag-in-debug* TRUE) then (printout t "    <D>validate-left-turn NU->DA (nu avem restrictii) " crlf))
     (retract ?f)
-    (assert (ag_bel (bel_type moment) (bel_pname left-turn-maneuver) (bel_pval allowed)))
-    ;(facts AGENT)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: Manevra interzisa din cauza starii drumului/marcajului: " ?type crlf)
+)
+
+; --- Trecere de pietoni, distanta minima admisa 25m
+(defrule AGENT::apropiere_trecere_pietoni
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?elem) (bel_pname isa) (bel_pval road_elem))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?elem) (bel_pname has_type) (bel_pval ?type&crosswalk))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?elem) (bel_pname rel_dist) (bel_pval ?d))
+    (test (< ?d 2500))
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: Interzis! Apropiere de " ?type " (Distanta: " ?d " cm)." crlf)
+)
+
+; --- Trecere la nivel de cale ferata, intersectii, giratoriu, distanta minima admisa 50m
+(defrule AGENT::apropiere_intersectii_si_cale_ferata
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?elem) (bel_pname isa) (bel_pval road_elem))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?elem) (bel_pname has_type) (bel_pval ?type&railway_level_crossing|intersection|roundabout))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?elem) (bel_pname rel_dist) (bel_pval ?d))
+    (test (< ?d 5000))
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: Interzis! Apropiere de " ?type " (Distanta: " ?d " cm)." crlf)
+)
+
+; --- Masina aflata intr-un sens giratoriu
+(defrule AGENT::in_giratoriu
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?elem) (bel_pname isa) (bel_pval road_elem))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?elem) (bel_pname has_type) (bel_pval inside_roundabout))
+
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: Interzis! Masina se afla intr-un giratoriu" crlf)
+)
+
+; --- Coloana oficiala
+(defrule AGENT::vehicule_regim_special
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname isa) (bel_pval vehicle))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?car) (bel_pname has_type) (bel_pval ?type&emergency|column))
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: Prioritate vehicul special detectat: " ?type crlf)
+)
+
+; --- Vizibilitate scazuta, prag diferit in functie de tipul drumului
+(defrule AGENT::vizibilitate_scazuta
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    (ag_bel (bel_type moment) (bel_pobj ?nat) (bel_pname isa) (bel_pval road_nature))
+    (ag_bel (bel_type moment) (bel_pobj ?nat) (bel_pname road_type) (bel_pval ?type))
+    (ag_bel (bel_type moment) (bel_pobj ?nat) (bel_pname has_visibility) (bel_pval ?vis))
+    (test (< ?vis
+        (if (eq ?type city) then 1000
+        else (if (eq ?type dn) then 2000
+        else (if (eq ?type highway) then 5000
+        else 0)))))
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: Vizibilitate critica pe " ?type " (" ?vis " cm). Manevra anulata." crlf)
+)
+
+; --- Curba in spate pe DN: distanta insuficienta pentru schimbarea benzii
+(defrule AGENT::curba_spate_dn
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+
+    (ag_percept (percept_pobj ?r) (percept_pname isa) (percept_pval road_attribute))
+    (ag_percept (percept_pobj ?r) (percept_pname road_category) (percept_pval exterior))
+
+    (ag_percept (percept_pobj ?c) (percept_pname isa) (percept_pval road_elem))
+    (ag_percept (percept_pobj ?c) (percept_pname has_type) (percept_pval curve))
+    (ag_percept (percept_pobj ?c) (percept_pname rel_dist) (percept_pval ?d))
+
+    (test (<= ?d 2000))
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t
+        "AGENT: Curba in spate pe DN la "
+        ?d " cm. Distanta insuficienta pentru schimbarea benzii."
+        crlf)
+)
+
+; --- Biciclist in fata in oras: distanta insuficienta pentru schimbarea benzii
+(defrule AGENT::biciclist_fata_oras
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+
+    (ag_percept (percept_pobj ?r) (percept_pname isa) (percept_pval road_attribute))
+    (ag_percept (percept_pobj ?r) (percept_pname road_category) (percept_pval city))
+
+    (ag_percept (percept_pobj ?b) (percept_pname isa) (percept_pval bicycle))
+    (ag_percept (percept_pobj ?b) (percept_pname rel_pos) (percept_pval front))
+    (ag_percept (percept_pobj ?b) (percept_pname rel_dist) (percept_pval ?d))
+
+    (test (< ?d 3000))
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t
+        "AGENT: Biciclist in fata in oras la "
+        ?d " cm. Distanta sub 30m, manevra anulata."
+        crlf)
+)
+
+; --- Tramvai in statie fara refugiu
+(defrule AGENT::tramvai_in_statie_fara_refugiu
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?tram) (bel_pname isa) (bel_pval vehicle))
+    (ag_bel (bel_type moment) (bel_pobj ?tram) (bel_pname has_type) (bel_pval tram))
+    (ag_bel (bel_type moment) (bel_pobj ?tram) (bel_pname rel_pos) (bel_pval front))
+    (ag_bel (bel_type moment) (bel_pobj ?tram) (bel_pname rel_dist) (bel_pval ?dist))
+
+    (ag_bel (bel_type moment) (bel_pobj ?statie) (bel_pname isa) (bel_pval road_elem))
+    (ag_bel (bel_type moment) (bel_pobj ?statie) (bel_pname has_type) (bel_pval tram_station_without_shelter))
+    (ag_bel (bel_type moment) (bel_pobj ?statie) (bel_pname rel_dist) (bel_pval ?dist))
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: [TRAMVAI] Oprire obligatorie! Tramvai in statie fara refugiu." crlf)
+)
+
+; --- Lucrari pe drum
+(defrule AGENT::apropiere_lucrari
+    (timp (valoare ?t))
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+    
+    (ag_bel (bel_type moment) (bel_pobj ?obj) (bel_pname isa) (bel_pval road_elem))
+    (ag_bel (bel_type moment) (bel_pobj ?obj) (bel_pname has_type) (bel_pval road_works))
+    (ag_bel (bel_type moment) (bel_pobj ?obj) (bel_pname rel_dist) (bel_pval ?dist))
+    
+    (test (< ?dist 5000))
+=>
+    (retract ?f)
+    (assert (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval prohibited)))
+    (printout t "AGENT: [LUCRARI] Zona de santier in " ?dist " cm. Pastrati banda!" crlf)
 )
 
 
+(defrule AGENT::este_voie
+    (declare (salience -10)) 
+    (timp (valoare ?t))
+    
+    ?f <- (ag_bel (bel_type moment) (bel_pname lane-change-maneuver) (bel_pval allowed))
+=>
+    (printout t "AGENT: [OK] Manevra de schimbare de banda este permisa!" crlf)
+)
 
-;---------Delete auxiliary facts which are no longer needed ----------
-;
-; Programmner's task
-;
+(defrule AGENT::STOP_SIMULARE
+    (declare (salience -10000))
+    (timp (valoare ?t))
+    (test (>= ?t 35))
+=>
+    (printout t "==========================================" crlf)
+    (printout t " SCENARIU FINALIZAT. STOP SIMULARE." crlf)
+    (printout t "==========================================" crlf)
+    (halt) ; Opreste executia imediat
+)
