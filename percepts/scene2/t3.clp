@@ -1,20 +1,20 @@
 ; --- EVENIMENT ---
 (ag_percept (percept_pobj ev) (percept_pname isa) (percept_pval eveniment))
 
-; --- DRUM: Oras, Linie Continua ---
+; --- DRUM: Oras, Linie Discontinua ---
 (ag_percept (percept_pobj elem1) (percept_pname partof) (percept_pval ev))
 (ag_percept (percept_pobj elem1) (percept_pname isa) (percept_pval road_attribute))
 (ag_percept (percept_pobj elem1) (percept_pname road_category) (percept_pval city))
-(ag_percept (percept_pobj elem1) (percept_pname has_type) (percept_pval continuous_strip))
+(ag_percept (percept_pobj elem1) (percept_pname has_type) (percept_pval discontinuous_strip))
 
-; --- EGO: Semnalizare OPRITA, viteza 38km/h ---
+; --- EGO: Semnalizare pornita, viteza 47km/h ---
 (ag_percept (percept_pobj elem2) (percept_pname partof) (percept_pval ev))
 (ag_percept (percept_pobj elem2) (percept_pname isa) (percept_pval vehicle))
-(ag_percept (percept_pobj elem2) (percept_pname blink) (percept_pval none))
-(ag_percept (percept_pobj elem2) (percept_pname velocity) (percept_pval 38))
+(ag_percept (percept_pobj elem2) (percept_pname blink) (percept_pval left))
+(ag_percept (percept_pobj elem2) (percept_pname velocity) (percept_pval 47))
 
-; --- ROAD ELEM: Sens giratoriu, 40m ---
-(ag_percept (percept_pobj elem3) (percept_pname partof) (percept_pval ev))
-(ag_percept (percept_pobj elem3) (percept_pname isa) (percept_pval road_elem))
-(ag_percept (percept_pobj elem3) (percept_pname type) (percept_pval roundabout))
-(ag_percept (percept_pobj elem3) (percept_pname rel_dist) (percept_pval 4000))
+; --- ROAD ELEM: intersectie, 63m ---
+(ag_percept (percept_pobj elem4) (percept_pname partof) (percept_pval ev))
+(ag_percept (percept_pobj elem4) (percept_pname isa) (percept_pval road_elem))
+(ag_percept (percept_pobj elem4) (percept_pname type) (percept_pval intersection))
+(ag_percept (percept_pobj elem3) (percept_pname rel_dist) (percept_pval 6300))
