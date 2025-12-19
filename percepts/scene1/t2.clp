@@ -1,4 +1,4 @@
-; EVENIMENT t1
+; --- EVENIMENT ---
 (ag_percept (percept_pobj ev) (percept_pname isa) (percept_pval eveniment))
 
 ; --- DRUM: Oras, Linie Continua ---
